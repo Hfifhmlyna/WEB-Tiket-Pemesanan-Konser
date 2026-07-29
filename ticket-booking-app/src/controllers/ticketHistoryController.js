@@ -1,9 +1,7 @@
-const fs = require("fs");
-const path = require("path");
-
-const DATA_DIR = path.join(__dirname, "..", "..", "data");
-const DATA_FILE_PATH = path.join(DATA_DIR, "ticket-history.json");
-const MAX_HISTORY_ITEMS = 1000;
+const {
+  listTicketHistoryByOwner,
+  upsertTicketHistory
+} = require("../repositories/ticketHistoryRepository");
 
 function normalizeUsername(value) {
   return String(value || "").trim().toLowerCase();
@@ -24,33 +22,6 @@ function normalizeSeatCategory(value) {
     .trim()
     .toUpperCase()
     .replace(/\s+/g, " ");
-}
-
-function ensureStoreFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  if (!fs.existsSync(DATA_FILE_PATH)) {
-    fs.writeFileSync(DATA_FILE_PATH, "[]", "utf8");
-  }
-}
-
-function readHistory() {
-  ensureStoreFile();
-
-  try {
-    const raw = fs.readFileSync(DATA_FILE_PATH, "utf8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function writeHistory(history) {
-  ensureStoreFile();
-  fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(history, null, 2), "utf8");
 }
 
 function normalizeItem(item) {
@@ -134,11 +105,7 @@ function normalizeTicketPayload(payload) {
   };
 }
 
-function buildTicketKey(ticket) {
-  return `${normalizeUsername(ticket.ownerUsername)}|${ticket.orderId}`;
-}
-
-function listTicketHistory(req, res) {
+async function listTicketHistory(req, res) {
   const ownerUsername = normalizeUsername(req.query.username);
 
   if (!ownerUsername) {
@@ -147,21 +114,27 @@ function listTicketHistory(req, res) {
     });
   }
 
-  const history = readHistory()
-    .map((ticket) => normalizeTicketPayload(ticket))
-    .filter((ticket) => Boolean(ticket) && normalizeUsername(ticket.ownerUsername) === ownerUsername)
-    .sort((ticketA, ticketB) => {
-      const timeA = new Date(ticketA.issuedAt || 0).getTime();
-      const timeB = new Date(ticketB.issuedAt || 0).getTime();
-      return timeB - timeA;
-    });
+  try {
+    const history = (await listTicketHistoryByOwner(ownerUsername))
+      .map((ticket) => normalizeTicketPayload(ticket))
+      .filter((ticket) => Boolean(ticket) && normalizeUsername(ticket.ownerUsername) === ownerUsername)
+      .sort((ticketA, ticketB) => {
+        const timeA = new Date(ticketA.issuedAt || 0).getTime();
+        const timeB = new Date(ticketB.issuedAt || 0).getTime();
+        return timeB - timeA;
+      });
 
-  return res.json({
-    data: history
-  });
+    return res.json({
+      data: history
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to load ticket history."
+    });
+  }
 }
 
-function saveTicketHistory(req, res) {
+async function saveTicketHistory(req, res) {
   const payload = req.body && req.body.ticket ? req.body.ticket : req.body;
   const ticket = normalizeTicketPayload(payload);
 
@@ -171,17 +144,13 @@ function saveTicketHistory(req, res) {
     });
   }
 
-  const history = readHistory()
-    .map((entry) => normalizeTicketPayload(entry))
-    .filter((entry) => Boolean(entry));
-
-  const key = buildTicketKey(ticket);
-  const nextHistory = [ticket, ...history.filter((entry) => buildTicketKey(entry) !== key)].slice(
-    0,
-    MAX_HISTORY_ITEMS
-  );
-
-  writeHistory(nextHistory);
+  try {
+    await upsertTicketHistory(ticket);
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to save ticket history."
+    });
+  }
 
   return res.status(201).json({
     message: "Ticket history saved.",
