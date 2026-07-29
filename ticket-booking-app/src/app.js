@@ -2,9 +2,14 @@ const express = require("express");
 const path = require("path");
 const cors = require("cors");
 
-const { login, requireAuth } = require("./controllers/authController");
+const {
+  USER_ROLES,
+  login,
+  requireAuth,
+  requireRole
+} = require("./controllers/authController");
 const { listProducts } = require("./controllers/productController");
-const { checkout, listOrders } = require("./controllers/orderController");
+const { checkout, listOrders, listAllOrders } = require("./controllers/orderController");
 const {
   listTicketHistory,
   saveTicketHistory
@@ -26,8 +31,14 @@ app.get("/health", (req, res) => {
 
 app.post("/api/auth/login", login);
 app.get("/api/products", listProducts);
-app.get("/api/orders", requireAuth, listOrders);
-app.post("/api/orders/checkout", requireAuth, checkout);
+app.get("/api/orders", requireAuth, requireRole(USER_ROLES.CUSTOMER), listOrders);
+app.post(
+  "/api/orders/checkout",
+  requireAuth,
+  requireRole(USER_ROLES.CUSTOMER),
+  checkout
+);
+app.get("/api/admin/orders", requireAuth, requireRole(USER_ROLES.ADMIN), listAllOrders);
 app.get("/api/tickets/history", listTicketHistory);
 app.post("/api/tickets/history", saveTicketHistory);
 

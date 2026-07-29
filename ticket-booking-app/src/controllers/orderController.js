@@ -73,8 +73,21 @@ function listOrders(req, res) {
   });
 }
 
+function listAllOrders(req, res) {
+  const sortedOrders = [...orders].sort((orderA, orderB) => {
+    const timeA = new Date(orderA.createdAt || 0).getTime();
+    const timeB = new Date(orderB.createdAt || 0).getTime();
+    return timeB - timeA;
+  });
+
+  return res.json({
+    data: sortedOrders
+  });
+}
+
 module.exports = {
   checkout,
   listOrders,
+  listAllOrders,
   orders
 };

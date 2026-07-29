@@ -11,6 +11,10 @@
     {
       "key": "token",
       "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
     }
   ],
   "item": [
@@ -39,6 +43,23 @@
       }
     },
     {
+      "name": "Auth - Login Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@ticketapp.local\",\n  \"password\": \"admin123\"\n}"
+        }
+      }
+    },
+    {
       "name": "Orders - Checkout",
       "request": {
         "method": "POST",
@@ -57,6 +78,19 @@
           "mode": "raw",
           "raw": "{\n  \"customerName\": \"Postman User\",\n  \"paymentMethod\": \"virtual_account\",\n  \"items\": [\n    {\n      \"id\": \"TKT-001\",\n      \"quantity\": 1\n    }\n  ]\n}"
         }
+      }
+    },
+    {
+      "name": "Admin - Orders List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/admin/orders"
       }
     }
   ]

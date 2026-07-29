@@ -8,10 +8,23 @@ const STORAGE_KEYS = {
   seatProgress: "ticketApp.seatProgress"
 };
 
-const DEMO_USER = {
+const DEMO_CUSTOMER_USER = {
   username: "user@mail.com",
   password: "password123",
-  displayName: "user@mail.com"
+  displayName: "user@mail.com",
+  role: "customer"
+};
+
+const ADMIN_USER = {
+  username: "admin@ticketapp.local",
+  password: "admin123",
+  displayName: "Admin Ticket",
+  role: "admin"
+};
+
+const USER_ROLES = {
+  ADMIN: "admin",
+  CUSTOMER: "customer"
 };
 
 const ORDER_STATUS = "PAID";
@@ -198,23 +211,121 @@ function normalizeUsername(username) {
   return String(username || "").trim().toLowerCase();
 }
 
-function getUsers() {
-  const existingUsers = readJSON(STORAGE_KEYS.users, null);
+function normalizeUserRole(role) {
+  return String(role || "").trim().toLowerCase() === USER_ROLES.ADMIN
+    ? USER_ROLES.ADMIN
+    : USER_ROLES.CUSTOMER;
+}
 
-  if (Array.isArray(existingUsers) && existingUsers.length > 0) {
-    return existingUsers;
+function getRoleLabel(role) {
+  return normalizeUserRole(role) === USER_ROLES.ADMIN ? "Admin" : "Pemesan";
+}
+
+function resolveLandingPageByRole(role) {
+  return normalizeUserRole(role) === USER_ROLES.ADMIN
+    ? "./admin.html"
+    : "./products.html";
+}
+
+function isAdminSession(session = getSession()) {
+  return normalizeUserRole(session && session.role ? session.role : "") === USER_ROLES.ADMIN;
+}
+
+function ensureCustomerAccess() {
+  const session = getSession();
+
+  if (!session) {
+    redirectTo("./index.html");
+    return false;
   }
 
-  const defaultUsers = [
+  if (isAdminSession(session)) {
+    redirectTo("./admin.html");
+    return false;
+  }
+
+  return true;
+}
+
+function ensureAdminAccess() {
+  const session = getSession();
+
+  if (!session) {
+    redirectTo("./index.html");
+    return false;
+  }
+
+  if (!isAdminSession(session)) {
+    redirectTo("./products.html");
+    return false;
+  }
+
+  return true;
+}
+
+function buildDefaultUsers() {
+  return [
     {
-      username: DEMO_USER.username,
-      password: DEMO_USER.password,
-      displayName: DEMO_USER.displayName
+      username: DEMO_CUSTOMER_USER.username,
+      password: DEMO_CUSTOMER_USER.password,
+      displayName: DEMO_CUSTOMER_USER.displayName,
+      role: USER_ROLES.CUSTOMER
+    },
+    {
+      username: ADMIN_USER.username,
+      password: ADMIN_USER.password,
+      displayName: ADMIN_USER.displayName,
+      role: USER_ROLES.ADMIN
     }
   ];
+}
 
-  writeJSON(STORAGE_KEYS.users, defaultUsers);
-  return defaultUsers;
+function getUsers() {
+  const existingUsers = readJSON(STORAGE_KEYS.users, []);
+  const normalizedUsers = [];
+  const seenUsernames = new Set();
+  const adminUsername = normalizeUsername(ADMIN_USER.username);
+
+  if (Array.isArray(existingUsers)) {
+    existingUsers.forEach((entry) => {
+      const username = normalizeUsername(entry && entry.username ? entry.username : "");
+      const password = String(entry && entry.password ? entry.password : "").trim();
+
+      if (!username || !password || seenUsernames.has(username)) {
+        return;
+      }
+
+      seenUsernames.add(username);
+      normalizedUsers.push({
+        username,
+        password,
+        displayName: String(
+          entry && entry.displayName ? entry.displayName : username
+        ),
+        role: username === adminUsername
+          ? USER_ROLES.ADMIN
+          : normalizeUserRole(entry && entry.role ? entry.role : USER_ROLES.CUSTOMER)
+      });
+    });
+  }
+
+  buildDefaultUsers().forEach((defaultUser) => {
+    const username = normalizeUsername(defaultUser.username);
+    if (seenUsernames.has(username)) {
+      return;
+    }
+
+    seenUsernames.add(username);
+    normalizedUsers.push({
+      username,
+      password: defaultUser.password,
+      displayName: defaultUser.displayName,
+      role: normalizeUserRole(defaultUser.role)
+    });
+  });
+
+  saveUsers(normalizedUsers);
+  return normalizedUsers;
 }
 
 function saveUsers(users) {
@@ -736,7 +847,7 @@ function syncLoginStatus() {
 
   const session = getSession();
   statusElement.textContent = session
-    ? `Login: ${session.displayName}`
+    ? `Login: ${session.displayName} (${getRoleLabel(session.role)})`
     : "Belum login";
 }
 
@@ -1100,7 +1211,7 @@ function renderCheckoutSummary(cart) {
 
 function initLoginPage() {
   if (isLoggedIn()) {
-    redirectTo("./products.html");
+    redirectTo(resolveLandingPageByRole(getSession()?.role || USER_ROLES.CUSTOMER));
     return;
   }
 
@@ -1166,12 +1277,17 @@ function initLoginPage() {
     setSession({
       username: user.username,
       displayName: user.displayName || user.username,
+      role: normalizeUserRole(user.role),
       loginAt: new Date().toISOString()
     });
 
-    showAlert(alertBox, "success", "Login berhasil. Mengarahkan ke katalog tiket...");
+    showAlert(
+      alertBox,
+      "success",
+      `Login berhasil sebagai ${getRoleLabel(user.role)}. Mengarahkan...`
+    );
     window.setTimeout(() => {
-      redirectTo("./products.html");
+      redirectTo(resolveLandingPageByRole(user.role));
     }, 700);
   });
 
@@ -1216,7 +1332,8 @@ function initLoginPage() {
     users.push({
       username,
       password,
-      displayName: username
+      displayName: username,
+      role: USER_ROLES.CUSTOMER
     });
     saveUsers(users);
 
@@ -1229,7 +1346,7 @@ function initLoginPage() {
 }
 
 async function initProductsPage() {
-  if (!ensureLoggedIn()) {
+  if (!ensureLoggedIn() || !ensureCustomerAccess()) {
     return;
   }
 
@@ -1289,7 +1406,7 @@ async function initProductsPage() {
 }
 
 function initCartPage() {
-  if (!ensureLoggedIn()) {
+  if (!ensureLoggedIn() || !ensureCustomerAccess()) {
     return;
   }
 
@@ -1476,7 +1593,7 @@ function initCartPage() {
 }
 
 function initCheckoutPage() {
-  if (!ensureLoggedIn()) {
+  if (!ensureLoggedIn() || !ensureCustomerAccess()) {
     return;
   }
 
@@ -1801,7 +1918,7 @@ function downloadTicketPdf(ticket) {
 }
 
 async function initTicketPage() {
-  if (!ensureLoggedIn()) {
+  if (!ensureLoggedIn() || !ensureCustomerAccess()) {
     return;
   }
 
@@ -1948,6 +2065,156 @@ async function initTicketPage() {
   });
 }
 
+function buildAdminItemsSummary(items) {
+  const safeItems = Array.isArray(items) ? items : [];
+  if (safeItems.length === 0) {
+    return "-";
+  }
+
+  return safeItems
+    .map((item) => {
+      const seatCategory = item.seatCategory || "CAT 1";
+      return `${item.name} (${item.quantity} . ${seatCategory})`;
+    })
+    .join("; ");
+}
+
+async function syncAllCustomerTicketHistoryForAdmin() {
+  const customerUsers = getUsers().filter(
+    (user) => normalizeUserRole(user.role) === USER_ROLES.CUSTOMER
+  );
+
+  await Promise.all(
+    customerUsers.map(async (user) => {
+      try {
+        const backendTickets = await fetchUserTicketHistoryFromBackend(user.username);
+        backendTickets.forEach((ticket) => {
+          appendTicketHistory(ticket);
+        });
+      } catch (error) {
+        // Keep local data when backend sync is unavailable.
+      }
+    })
+  );
+
+  return sortTicketsByIssuedAtDesc(getTicketHistory());
+}
+
+async function initAdminPage() {
+  if (!ensureLoggedIn() || !ensureAdminAccess()) {
+    return;
+  }
+
+  attachLogoutHandler();
+  syncLoginStatus();
+
+  const adminAlert = document.getElementById("adminAlert");
+  const tableBody = document.getElementById("adminOrdersBody");
+  const filterInput = document.getElementById("adminFilterUsername");
+  const applyFilterButton = document.getElementById("btnApplyAdminFilter");
+  const resetFilterButton = document.getElementById("btnResetAdminFilter");
+  const refreshButton = document.getElementById("btnRefreshAdminData");
+  const totalOrdersElement = document.getElementById("adminTotalOrders");
+  const totalCustomersElement = document.getElementById("adminTotalCustomers");
+  const totalRevenueElement = document.getElementById("adminTotalRevenue");
+  const latestIssuedElement = document.getElementById("adminLatestIssued");
+
+  if (
+    !adminAlert ||
+    !tableBody ||
+    !filterInput ||
+    !applyFilterButton ||
+    !resetFilterButton ||
+    !refreshButton ||
+    !totalOrdersElement ||
+    !totalCustomersElement ||
+    !totalRevenueElement ||
+    !latestIssuedElement
+  ) {
+    return;
+  }
+
+  let allTickets = sortTicketsByIssuedAtDesc(getTicketHistory());
+
+  const render = () => {
+    const keyword = normalizeUsername(filterInput.value || "");
+    const filteredTickets = keyword
+      ? allTickets.filter(
+          (ticket) =>
+            normalizeUsername(ticket.ownerUsername).includes(keyword) ||
+            String(ticket.orderId || "").toLowerCase().includes(keyword)
+        )
+      : allTickets;
+
+    const uniqueCustomers = new Set(
+      filteredTickets.map((ticket) => normalizeUsername(ticket.ownerUsername || ""))
+    );
+
+    totalOrdersElement.textContent = String(filteredTickets.length);
+    totalCustomersElement.textContent = String(uniqueCustomers.size);
+    totalRevenueElement.textContent = formatRupiah(
+      filteredTickets.reduce((sum, ticket) => sum + Number(ticket.totalAmount || 0), 0)
+    );
+    latestIssuedElement.textContent = filteredTickets[0]
+      ? formatIssuedDate(filteredTickets[0].issuedAt, true)
+      : "-";
+
+    if (filteredTickets.length === 0) {
+      tableBody.innerHTML =
+        '<tr><td colspan="8" class="text-center text-secondary py-4">Belum ada data tiket untuk ditampilkan.</td></tr>';
+      showAlert(adminAlert, "warning", "Belum ada tiket dari pemesan.");
+      return;
+    }
+
+    hideAlert(adminAlert);
+    tableBody.innerHTML = filteredTickets
+      .map(
+        (ticket, index) => `
+        <tr id="adminTicketRow-${index}">
+          <td>${ticket.orderId || "-"}</td>
+          <td>${ticket.ownerUsername || "-"}</td>
+          <td>${ticket.buyer?.recipientName || "-"}</td>
+          <td>${ticket.status || ORDER_STATUS}</td>
+          <td>${formatIssuedDate(ticket.issuedAt, true)}</td>
+          <td>${ticket.items.length}</td>
+          <td>${formatRupiah(ticket.totalAmount || 0)}</td>
+          <td class="small">${buildAdminItemsSummary(ticket.items)}</td>
+        </tr>
+      `
+      )
+      .join("");
+  };
+
+  const refreshData = async () => {
+    showAlert(adminAlert, "info", "Menyinkronkan data tiket dari backend...");
+    allTickets = await syncAllCustomerTicketHistoryForAdmin();
+    render();
+  };
+
+  applyFilterButton.addEventListener("click", () => {
+    render();
+  });
+
+  resetFilterButton.addEventListener("click", () => {
+    filterInput.value = "";
+    render();
+  });
+
+  filterInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      render();
+    }
+  });
+
+  refreshButton.addEventListener("click", async () => {
+    await refreshData();
+  });
+
+  render();
+  await refreshData();
+}
+
 function boot() {
   const page = document.body.dataset.page;
 
@@ -1973,6 +2240,11 @@ function boot() {
 
   if (page === "ticket") {
     initTicketPage();
+    return;
+  }
+
+  if (page === "admin") {
+    initAdminPage();
   }
 }
 

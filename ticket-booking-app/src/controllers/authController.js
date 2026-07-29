@@ -1,13 +1,41 @@
+const USER_ROLES = {
+  ADMIN: "admin",
+  CUSTOMER: "customer"
+};
+
 const users = [
   {
     id: "user-1",
     name: "Demo User",
     email: "demo@ticketapp.local",
-    password: "demo123"
+    password: "demo123",
+    role: USER_ROLES.CUSTOMER
+  },
+  {
+    id: "admin-1",
+    name: "Admin Ticket",
+    email: "admin@ticketapp.local",
+    password: "admin123",
+    role: USER_ROLES.ADMIN
   }
 ];
 
 const sessions = new Map();
+
+function normalizeRole(role) {
+  return String(role || "").trim().toLowerCase() === USER_ROLES.ADMIN
+    ? USER_ROLES.ADMIN
+    : USER_ROLES.CUSTOMER;
+}
+
+function mapPublicUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: normalizeRole(user.role)
+  };
+}
 
 function login(req, res) {
   const { email, password } = req.body || {};
@@ -29,20 +57,12 @@ function login(req, res) {
   }
 
   const token = Buffer.from(`${user.id}:${Date.now()}`).toString("base64url");
-  sessions.set(token, {
-    id: user.id,
-    name: user.name,
-    email: user.email
-  });
+  sessions.set(token, mapPublicUser(user));
 
   return res.json({
     message: "Login successful.",
     token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email
-    }
+    user: mapPublicUser(user)
   });
 }
 
@@ -73,8 +93,26 @@ function requireAuth(req, res, next) {
   return next();
 }
 
+function requireRole(...roles) {
+  const allowedRoles = roles.map((role) => normalizeRole(role));
+
+  return function checkRole(req, res, next) {
+    const currentRole = normalizeRole(req.user && req.user.role ? req.user.role : "");
+
+    if (!allowedRoles.includes(currentRole)) {
+      return res.status(403).json({
+        message: "Forbidden. You do not have access to this resource."
+      });
+    }
+
+    return next();
+  };
+}
+
 module.exports = {
+  USER_ROLES,
   login,
   requireAuth,
+  requireRole,
   getSession
 };
