@@ -1,0 +1,63 @@
+{
+  "info": {
+    "name": "Ticket Booking App API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"demo@ticketapp.local\",\n  \"password\": \"demo123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Products - List",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/products"
+      }
+    },
+    {
+      "name": "Orders - Checkout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": "{{baseUrl}}/api/orders/checkout",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Postman User\",\n  \"paymentMethod\": \"virtual_account\",\n  \"items\": [\n    {\n      \"id\": \"TKT-001\",\n      \"quantity\": 1\n    }\n  ]\n}"
+        }
+      }
+    }
+  ]
+}

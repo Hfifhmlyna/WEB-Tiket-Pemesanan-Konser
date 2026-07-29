@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistem Pemesanan Tiket | Login</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --matcha-dark: #5f7f52;
+        --matcha-light: #a5bf93;
+        --brown-dark: #5f4434;
+        --brown-light: #9c7b63;
+        --paper: #fcf8f3;
+      }
+
+      body {
+        min-height: 100vh;
+        background: linear-gradient(
+          145deg,
+          rgba(165, 191, 147, 0.3) 0%,
+          rgba(156, 123, 99, 0.28) 58%,
+          #f8f3ee 100%
+        );
+      }
+
+      .login-card {
+        border: 1px solid rgba(95, 68, 52, 0.18);
+        border-radius: 1.2rem;
+        background: var(--paper);
+        box-shadow: 0 0.9rem 1.8rem rgba(95, 68, 52, 0.16);
+      }
+
+      .brand-title {
+        background: linear-gradient(95deg, var(--brown-dark), var(--matcha-dark));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .btn-login {
+        border: 0;
+        background: linear-gradient(110deg, var(--brown-dark), var(--matcha-dark));
+      }
+
+      .btn-login:hover {
+        filter: brightness(1.05);
+      }
+
+      .register-panel {
+        background: rgba(165, 191, 147, 0.12);
+        border: 1px dashed rgba(95, 127, 82, 0.55);
+        border-radius: 0.9rem;
+      }
+
+      #btnShowRegister {
+        color: var(--brown-dark);
+        border-color: rgba(95, 68, 52, 0.45);
+        background: rgba(165, 191, 147, 0.12);
+      }
+
+      #btnShowRegister:hover {
+        color: #fff;
+        border-color: var(--brown-dark);
+        background: var(--brown-dark);
+      }
+
+      #btnRegister {
+        border-color: var(--matcha-dark);
+        background: var(--matcha-dark);
+      }
+
+      #btnRegister:hover {
+        border-color: #4f6c44;
+        background: #4f6c44;
+      }
+
+      .form-control:focus {
+        border-color: var(--matcha-dark);
+        box-shadow: 0 0 0 0.2rem rgba(95, 127, 82, 0.2);
+      }
+    </style>
+  </head>
+  <body data-page="login">
+    <main class="container py-5">
+      <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-12 col-md-8 col-lg-5">
+          <section class="card login-card">
+            <div class="card-body p-4 p-md-5">
+              <h1 class="h3 fw-bold brand-title">Sistem Pemesanan Tiket</h1>
+              <p class="text-secondary mb-4">
+                Masuk untuk melanjutkan pemesanan tiket Anda.
+              </p>
+
+              <div id="alert" class="alert d-none" role="alert"></div>
+
+              <form id="loginForm" novalidate>
+                <div class="mb-3">
+                  <label for="username" class="form-label fw-semibold"
+                    >Email / Username</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="username"
+                    placeholder="user@mail.com"
+                    autocomplete="username"
+                  />
+                </div>
+
+                <div class="mb-3">
+                  <label for="password" class="form-label fw-semibold">Password</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    placeholder="Masukkan password"
+                    autocomplete="current-password"
+                  />
+                </div>
+
+                <button id="btnLogin" type="submit" class="btn btn-login text-white w-100">
+                  Login
+                </button>
+              </form>
+
+              <div class="text-center my-3">
+                <button
+                  id="btnShowRegister"
+                  type="button"
+                  class="btn btn-outline-primary btn-sm"
+                >
+                  Belum punya akun? Buat Akun
+                </button>
+              </div>
+
+              <section id="registerPanel" class="register-panel p-3 d-none">
+                <h2 class="h6 fw-bold mb-2">Form Pendaftaran Akun</h2>
+                <div id="registerAlert" class="alert d-none py-2" role="alert"></div>
+
+                <form id="registerForm" novalidate>
+                  <div class="mb-2">
+                    <label for="registerUsername" class="form-label fw-semibold mb-1"
+                      >Email / Username Baru</label
+                    >
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="registerUsername"
+                      placeholder="contoh@mail.com"
+                      autocomplete="username"
+                    />
+                  </div>
+
+                  <div class="mb-2">
+                    <label for="registerPassword" class="form-label fw-semibold mb-1"
+                      >Password Baru</label
+                    >
+                    <input
+                      type="password"
+                      class="form-control form-control-sm"
+                      id="registerPassword"
+                      placeholder="Minimal 6 karakter"
+                      autocomplete="new-password"
+                    />
+                  </div>
+
+                  <div class="mb-3">
+                    <label
+                      for="registerConfirmPassword"
+                      class="form-label fw-semibold mb-1"
+                      >Konfirmasi Password</label
+                    >
+                    <input
+                      type="password"
+                      class="form-control form-control-sm"
+                      id="registerConfirmPassword"
+                      placeholder="Ulangi password"
+                      autocomplete="new-password"
+                    />
+                  </div>
+
+                  <button id="btnRegister" type="submit" class="btn btn-success btn-sm w-100">
+                    Buat Akun
+                  </button>
+                </form>
+              </section>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

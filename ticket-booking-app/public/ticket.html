@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistem Pemesanan Tiket | E-Ticket</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --matcha-dark: #5f7f52;
+        --matcha-light: #a5bf93;
+        --brown-dark: #5f4434;
+        --paper: #fcf8f3;
+      }
+
+      body {
+        background: linear-gradient(
+          165deg,
+          rgba(165, 191, 147, 0.24) 0%,
+          rgba(156, 123, 99, 0.22) 58%,
+          #f8f3ee 100%
+        );
+      }
+
+      .app-navbar {
+        background: var(--brown-dark);
+      }
+
+      .app-navbar .navbar-brand {
+        color: #f5eee6;
+      }
+
+      #loginStatus {
+        background: var(--matcha-light) !important;
+        color: var(--brown-dark) !important;
+      }
+
+      #btnBackToProducts {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.55);
+      }
+
+      #btnBackToProducts:hover {
+        color: #fff;
+        border-color: var(--matcha-light);
+        background: rgba(165, 191, 147, 0.2);
+      }
+
+      #btnLogout {
+        color: #fff;
+        border-color: var(--matcha-dark);
+        background: var(--matcha-dark);
+      }
+
+      #btnLogout:hover {
+        border-color: #4f6c44;
+        background: #4f6c44;
+      }
+
+      #cartCounter {
+        background: var(--matcha-dark) !important;
+      }
+
+      .panel {
+        border: 1px solid rgba(95, 68, 52, 0.16);
+        border-radius: 1rem;
+        background: var(--paper);
+        box-shadow: 0 0.9rem 1.8rem rgba(95, 68, 52, 0.13);
+      }
+
+      .table-light th {
+        background: rgba(165, 191, 147, 0.24) !important;
+        color: var(--brown-dark);
+      }
+
+      #btnPrintTicket,
+      #btnShopTicket,
+      #btnDownloadTicketPdf {
+        border: 0;
+        background: linear-gradient(110deg, var(--brown-dark), var(--matcha-dark));
+      }
+
+      #btnPrintTicket:hover,
+      #btnShopTicket:hover,
+      #btnDownloadTicketPdf:hover {
+        filter: brightness(1.06);
+      }
+
+      .ticket-meta {
+        border: 1px dashed rgba(95, 68, 52, 0.24);
+        border-radius: 0.75rem;
+        background: rgba(165, 191, 147, 0.12);
+      }
+
+      .ticket-qr-wrap {
+        border: 1px dashed rgba(95, 68, 52, 0.24);
+        border-radius: 0.75rem;
+        background: rgba(165, 191, 147, 0.08);
+      }
+
+      #ticketQrImage {
+        width: 100%;
+        max-width: 220px;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 0.6rem;
+        border: 1px solid rgba(95, 68, 52, 0.16);
+        background: #fff;
+      }
+
+      #ticketQrValue {
+        word-break: break-all;
+      }
+
+      .ticket-history-item.active {
+        border-color: var(--brown-dark);
+        background: linear-gradient(
+          110deg,
+          rgba(95, 68, 52, 0.94),
+          rgba(95, 127, 82, 0.92)
+        );
+      }
+
+      @media print {
+        nav,
+        #btnPrintTicket,
+        #btnDownloadTicketPdf,
+        #btnBackToProducts,
+        #btnLogout,
+        #cartCounter,
+        #ticketAlert {
+          display: none !important;
+        }
+
+        body {
+          background: #fff;
+        }
+
+        .panel {
+          box-shadow: none;
+          border-color: #ddd;
+        }
+      }
+    </style>
+  </head>
+  <body data-page="ticket">
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-sm app-navbar">
+      <div class="container">
+        <span class="navbar-brand fw-bold">Ticket Booking Web App</span>
+
+        <div class="d-flex align-items-center gap-2 ms-auto">
+          <span id="loginStatus" class="badge text-bg-info text-dark"></span>
+
+          <a id="btnBackToProducts" href="./products.html" class="btn btn-outline-light">
+            Katalog
+          </a>
+
+          <a href="./cart.html" class="btn btn-outline-light position-relative">
+            Keranjang
+            <span
+              id="cartCounter"
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger"
+              >0</span
+            >
+          </a>
+
+          <button id="btnLogout" type="button" class="btn btn-warning fw-semibold">
+            Logout
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container py-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h1 class="h3 fw-bold mb-0">E-Ticket Konser</h1>
+        <div class="d-flex gap-2">
+          <button id="btnDownloadTicketPdf" type="button" class="btn btn-primary">
+            Download PDF
+          </button>
+          <button id="btnPrintTicket" type="button" class="btn btn-primary">Cetak Tiket</button>
+        </div>
+      </div>
+
+      <div id="ticketAlert" class="alert d-none" role="alert"></div>
+
+      <section id="emptyTicketState" class="card panel d-none">
+        <div class="card-body text-center py-5">
+          <h2 class="h5 fw-bold mb-2">Belum Ada Tiket</h2>
+          <p class="text-secondary mb-3">
+            Setelah checkout berhasil, tiket Anda akan tampil di halaman ini.
+          </p>
+          <a href="./products.html" id="btnShopTicket" class="btn btn-primary">Pilih Tiket</a>
+        </div>
+      </section>
+
+      <section id="ticketCard" class="card panel d-none">
+        <div class="card-body">
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-lg-4">
+              <div class="ticket-meta p-3 h-100">
+                <div class="small text-secondary">ID Pesanan</div>
+                <div id="ticketOrderId" class="h5 fw-bold mb-0">-</div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+              <div class="ticket-meta p-3 h-100">
+                <div class="small text-secondary">Status</div>
+                <div id="ticketStatus" class="h5 fw-bold mb-0">-</div>
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+              <div class="ticket-meta p-3 h-100">
+                <div class="small text-secondary">Waktu Checkout</div>
+                <div id="ticketIssuedAt" class="fw-semibold">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-4">
+              <div class="small text-secondary">Nama Pemesan</div>
+              <div id="ticketRecipient" class="fw-semibold">-</div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="small text-secondary">Alamat / Email Tiket</div>
+              <div id="ticketAddress" class="fw-semibold">-</div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="small text-secondary">Nomor Telepon</div>
+              <div id="ticketPhone" class="fw-semibold">-</div>
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-12 col-xl-8">
+              <div class="table-responsive">
+                <table class="table align-middle" id="ticketItemsTable">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Konser</th>
+                      <th>Lokasi</th>
+                      <th>Qty</th>
+                      <th>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ticketItemsBody"></tbody>
+                </table>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="text-secondary">Total Pembayaran</div>
+                <div id="ticketGrandTotal" class="h4 fw-bold mb-0">Rp0</div>
+              </div>
+            </div>
+
+            <div class="col-12 col-xl-4">
+              <div class="ticket-qr-wrap p-3 h-100 d-flex flex-column align-items-center">
+                <div class="fw-semibold mb-2">QR E-Ticket</div>
+                <img id="ticketQrImage" src="" alt="QR tiket" />
+                <div class="small text-secondary mt-2">Kode Validasi</div>
+                <div id="ticketQrValue" class="small fw-semibold text-center"></div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-4" />
+
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h2 class="h6 fw-bold mb-0">Riwayat Tiket</h2>
+            <span id="ticketHistoryCount" class="badge text-bg-secondary">0 tiket</span>
+          </div>
+
+          <div id="ticketHistoryList" class="list-group"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
